@@ -769,18 +769,56 @@ def create_video_content(campaign):
         if st.button("🎬 AI ভিডিও জেনারেট করুন"):
             st.info("AI ভিডিও জেনারেট হচ্ছে... (ডেমো)")
             # Mock video generation
-            st.markdown("""
-This is some markdown text
-With multiple lines
-Now properly closed with triple quotes
-""")
+               with col1:
+        st.markdown(f"""
+        <div style="
+            border: 2px solid #e5e7eb;
+            border-radius: 10px;
+            padding: 20px;
+            background: white;
+            margin: 10px 0;
+        ">
+            <div style="display: flex; align-items: center; margin-bottom: 15px;">
+                <div style="
+                    width: 40px;
+                    height: 40px;
+                    background: {BRANDS[campaign['brand']]['color']};
+                    border-radius: 50%;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    color: white;
+                    font-size: 1.5rem;
+                    margin-right: 10px;
+                ">{BRANDS[campaign['brand']]['logo']}</div>
+                <div>
+                    <strong>আপনার পেজ</strong><br>
+                    <small>Sponsored • Just now</small>
+                </div>
+            </div>
+            
+            <p><strong>{headline}</strong></p>
+            <p>{body}</p>
+            
             <div style="
-                "background-color: #f0f0f0; padding: 10px;">Content</div>';
+                background: #f3f4f6;
                 height: 300px;
                 border-radius: 10px;
                 display: flex;
                 align-items: center;
-                justify-content: center;
-                color: white;
-                font-size: 1.5rem;
-                margin:
+                    justify-content: center;
+                    color: #6b7280;
+                    margin: 15px 0;
+                ">
+                🖼️ পোস্ট ইমেজ
+            </div>
+            
+            <p><small>{hashtags}</small></p>
+            
+            <div style="display: flex; gap: 20px; color: #6b7280; margin-top: 15px;">
+                <span>❤️ লাইক</span>
+                <span>💬 কমেন্ট</span>
+                <span>🔄 শেয়ার</span>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
