@@ -3,6 +3,7 @@ import pandas as pd
 import numpy as np
 import random
 from datetime import datetime, timedelta
+import time
 
 # Page config
 st.set_page_config(
@@ -64,6 +65,14 @@ st.markdown("""
         display: inline-block;
         margin: 5px;
     }
+    
+    .main-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        padding: 20px;
+        border-radius: 15px;
+        color: white;
+        margin-bottom: 30px;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -76,6 +85,8 @@ if 'completed_campaigns' not in st.session_state:
     st.session_state.completed_campaigns = []
 if 'content_created' not in st.session_state:
     st.session_state.content_created = []
+if 'notifications' not in st.session_state:
+    st.session_state.notifications = []
 
 # Brand Database
 BRANDS = {
@@ -244,6 +255,138 @@ def generate_video_script(brand, title):
     
     return scripts.get(brand, f'{brand} এর {title} সম্পর্কে আজকের বিশেষ ভিডিও।')
 
+def add_notification(message, type='info'):
+    """Add notification to session state"""
+    st.session_state.notifications.append({
+        'message': message,
+        'type': type,
+        'time': datetime.now().strftime("%H:%M")
+    })
+
+def show_dashboard():
+    """Show main dashboard"""
+    st.markdown("""
+    <div class="main-header">
+        <h1>💰 Chronos Bazaar - ব্র্যান্ড মার্কেটপ্লেস</h1>
+        <p>ব্র্যান্ড ক্যাম্পেইনে অংশগ্রহণ করুন, কন্টেন্ট তৈরি করুন এবং আয় করুন</p>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # Stats Cards
+    col1, col2, col3, col4 = st.columns(4)
+    
+    with col1:
+        st.markdown(f"""
+        <div class="earning-card">
+            <h3>💰 ব্যালেন্স</h3>
+            <h2>৳ {st.session_state.balance}</h2>
+            <p>বর্তমান আয়</p>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    with col2:
+        active_count = len([c for c in st.session_state.active_campaigns if c['status'] != 'completed'])
+        st.markdown(f"""
+        <div style="background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); color: white; padding: 20px; border-radius: 15px;">
+            <h3>🎯 সক্রিয় ক্যাম্পেইন</h3>
+            <h2>{active_count}</h2>
+            <p>চলমান কাজ</p>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    with col3:
+        completed_count = len(st.session_state.completed_campaigns)
+        st.markdown(f"""
+        <div style="background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); color: white; padding: 20px; border-radius: 15px;">
+            <h3>✅ সম্পন্ন ক্যাম্পেইন</h3>
+            <h2>{completed_count}</h2>
+            <p>সম্পন্ন কাজ</p>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    with col4:
+        total_earning = sum(c.get('estimated_earning', 0) for c in st.session_state.completed_campaigns)
+        st.markdown(f"""
+        <div style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white; padding: 20px; border-radius: 15px;">
+            <h3>📈 মোট আয়</h3>
+            <h2>৳ {total_earning}</h2>
+            <p>সর্বমোট উপার্জন</p>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    st.markdown("---")
+    
+    # Quick Actions
+    st.subheader("⚡ দ্রুত একশন")
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        if st.button("🏢 ব্র্যান্ড ব্রাউজ করুন", use_container_width=True):
+            st.session_state.page = "marketplace"
+            st.rerun()
+    
+    with col2:
+        if st.button("🎨 কন্টেন্ট তৈরি করুন", use_container_width=True):
+            st.session_state.page = "create_content"
+            st.rerun()
+    
+    with col3:
+        if st.button("📊 পারফরম্যান্স দেখুন", use_container_width=True):
+            st.session_state.page = "performance"
+            st.rerun()
+    
+    st.markdown("---")
+    
+    # Recent Activity
+    st.subheader("📝 সাম্প্রতিক কার্যকলাপ")
+    
+    if not st.session_state.active_campaigns and not st.session_state.completed_campaigns:
+        st.info("ℹ️ আপনার কোনো সক্রিয় বা সম্পন্ন ক্যাম্পেইন নেই। প্রথমে ব্র্যান্ড মার্কেটপ্লেস থেকে ক্যাম্পেইন গ্রহণ করুন।")
+    
+    else:
+        # Show active campaigns
+        if st.session_state.active_campaigns:
+            st.markdown("#### 🎯 চলমান ক্যাম্পেইন")
+            for campaign in st.session_state.active_campaigns[-3:]:
+                status_text = "কন্টেন্ট তৈরি করতে হবে" if campaign['status'] == 'content_pending' else "পোস্ট করা হয়েছে"
+                status_color = "#f59e0b" if campaign['status'] == 'content_pending' else "#10b981"
+                
+                st.markdown(f"""
+                <div style="
+                    background: white;
+                    border-radius: 10px;
+                    padding: 15px;
+                    margin: 10px 0;
+                    border-left: 4px solid {status_color};
+                    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+                ">
+                    <h4>{campaign['brand']} - {campaign['title']}</h4>
+                    <p><strong>স্ট্যাটাস:</strong> <span style="color: {status_color}">{status_text}</span></p>
+                    <p><strong>আনুমানিক আয়:</strong> ৳{campaign.get('estimated_earning', 0):.2f}</p>
+                    <p><strong>ডেডলাইন:</strong> {campaign.get('deadline', '১৫ ডিসেম্বর')}</p>
+                </div>
+                """, unsafe_allow_html=True)
+        
+        # Show completed campaigns
+        if st.session_state.completed_campaigns:
+            st.markdown("#### ✅ সম্পন্ন ক্যাম্পেইন")
+            for campaign in st.session_state.completed_campaigns[-3:]:
+                st.markdown(f"""
+                <div style="
+                    background: white;
+                    border-radius: 10px;
+                    padding: 15px;
+                    margin: 10px 0;
+                    border-left: 4px solid #10b981;
+                    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+                ">
+                    <h4>{campaign['brand']} - {campaign['title']}</h4>
+                    <p><strong>আয়:</strong> ৳{campaign.get('actual_earning', campaign.get('estimated_earning', 0)):.2f}</p>
+                    <p><strong>রিচ:</strong> {campaign.get('actual_reach', 0)}</p>
+                    <p><strong>সম্পন্ন তারিখ:</strong> {campaign.get('completed_date', 'N/A')}</p>
+                </div>
+                """, unsafe_allow_html=True)
+
 def show_marketplace():
     """Show brand marketplace"""
     st.title("🏢 ব্র্যান্ড মার্কেটপ্লেস")
@@ -287,7 +430,8 @@ def show_marketplace():
         for campaign in brand_data['campaigns']:
             if campaign['status'] == 'active':
                 # Apply filters
-                if content_filter != "সবগুলো" and content_filter != get_content_type_name(campaign['content_type']):
+                content_type_name = get_content_type_name(campaign['content_type'])
+                if content_filter != "সবগুলো" and content_filter != content_type_name:
                     continue
                 
                 if payment_filter == "৳১০০ এর নিচে" and campaign['base_payment'] >= 100:
@@ -307,6 +451,7 @@ def display_campaign_card(brand_name, brand_data, campaign):
     col1, col2, col3 = st.columns([3, 1, 1])
     
     with col1:
+        max_earning = campaign['base_payment'] + (campaign['target_reach'] * campaign['per_engagement'])
         st.markdown(f"""
         <div class="campaign-card">
             <h3>{campaign['title']}</h3>
@@ -335,7 +480,7 @@ def display_campaign_card(brand_name, brand_data, campaign):
                 <strong>পেমেন্ট স্ট্রাকচার:</strong><br>
                 • বেস পেমেন্ট: ৳{campaign['base_payment']}<br>
                 • প্রতি এঙ্গেজমেন্ট: ৳{campaign['per_engagement']}<br>
-                • সর্বোচ্চ আয়: ৳{campaign['base_payment'] + (campaign['target_reach'] * campaign['per_engagement'])}
+                • সর্বোচ্চ আয়: ৳{max_earning:.2f}
             </div>
         </div>
         """, unsafe_allow_html=True)
@@ -375,7 +520,9 @@ def display_campaign_card(brand_name, brand_data, campaign):
                     'current_engagement': 0,
                     'estimated_earning': 0
                 })
+                add_notification(f"✅ '{campaign['title']}' ক্যাম্পেইন গ্রহণ করা হয়েছে!", 'success')
                 st.success(f"✅ '{campaign['title']}' ক্যাম্পেইন গ্রহণ করা হয়েছে!")
+                time.sleep(1)
                 st.rerun()
         else:
             st.info("⏳ ইতিমধ্যে গ্রহণ করা হয়েছে")
@@ -400,6 +547,7 @@ def create_content():
     if not st.session_state.active_campaigns:
         st.info("📭 আপনি এখনো কোনো ক্যাম্পেইন গ্রহণ করেননি। প্রথমে ব্র্যান্ড মার্কেটপ্লেস থেকে ক্যাম্পেইন গ্রহণ করুন।")
         if st.button("🏢 ব্র্যান্ড মার্কেটপ্লেস দেখুন"):
+            st.session_state.page = "marketplace"
             st.rerun()
         return
     
@@ -602,8 +750,11 @@ def create_static_post_content(campaign):
                 'estimated_earning': total_estimated
             })
             
+            add_notification(f"✅ '{campaign['title']}' এর কন্টেন্ট সাবমিট করা হয়েছে!", 'success')
             st.success("✅ কন্টেন্ট সাবমিট করা হয়েছে! পারফরম্যান্স ট্র্যাকিং শুরু হয়েছে।")
             st.balloons()
+            time.sleep(2)
+            st.rerun()
 
 def create_video_content(campaign):
     """Create video content section"""
@@ -708,8 +859,11 @@ def create_video_content(campaign):
                 'estimated_earning': total_estimated
             })
             
+            add_notification(f"✅ '{campaign['title']}' এর ভিডিও সাবমিট করা হয়েছে!", 'success')
             st.success("✅ ভিডিও সাবমিট করা হয়েছে! পারফরম্যান্স ট্র্যাকিং শুরু হয়েছে।")
             st.balloons()
+            time.sleep(2)
+            st.rerun()
 
 def create_text_image_content(campaign):
     """Create text+image content section"""
@@ -766,4 +920,198 @@ def create_text_image_content(campaign):
         
         # Calculate estimated earning
         base_earning = campaign['base_payment'] if estimated_engagement >= campaign['min_engagement'] else 0
-        engagement_earning = estimated_engagement
+        engagement_earning = estimated_engagement * campaign['per_engagement']
+        total_estimated = base_earning + engagement_earning
+        
+        st.metric("আনুমানিক আয়", f"৳{total_estimated:.2f}")
+        
+        if st.button("✅ কন্টেন্ট সাবমিট করুন", type="primary", use_container_width=True):
+            # Update campaign
+            for i, c in enumerate(st.session_state.active_campaigns):
+                if c['campaign_id'] == campaign['campaign_id']:
+                    st.session_state.active_campaigns[i]['status'] = 'posted'
+                    st.session_state.active_campaigns[i]['created_content'] = {
+                        'headline': headline,
+                        'body': body,
+                        'hashtags': hashtags,
+                        'image_option': image_option,
+                        'created_date': datetime.now().strftime("%d %b %Y, %I:%M %p")
+                    }
+                    st.session_state.active_campaigns[i]['current_reach'] = estimated_reach
+                    st.session_state.active_campaigns[i]['current_engagement'] = estimated_engagement
+                    st.session_state.active_campaigns[i]['estimated_earning'] = total_estimated
+            
+            # Add to content created
+            st.session_state.content_created.append({
+                'campaign_id': campaign['campaign_id'],
+                'brand': campaign['brand'],
+                'title': campaign['title'],
+                'content_type': campaign['content_type'],
+                'content': {'headline': headline, 'body': body, 'hashtags': hashtags},
+                'created_date': datetime.now().strftime("%d %b %Y, %I:%M %p"),
+                'estimated_earning': total_estimated
+            })
+            
+            add_notification(f"✅ '{campaign['title']}' এর টেক্সট+ইমেজ কন্টেন্ট সাবমিট করা হয়েছে!", 'success')
+            st.success("✅ কন্টেন্ট সাবমিট করা হয়েছে! পারফরম্যান্স ট্র্যাকিং শুরু হয়েছে।")
+            st.balloons()
+            time.sleep(2)
+            st.rerun()
+
+def show_performance():
+    """Show performance tracking"""
+    st.title("📊 পারফরম্যান্স ট্র্যাকিং")
+    
+    # Filter options
+    col1, col2 = st.columns(2)
+    with col1:
+        time_filter = st.selectbox("সময়ফিল্টার", ["সব সময়", "সর্বশেষ ৭ দিন", "সর্বশেষ ৩০ দিন", "এই মাস"])
+    with col2:
+        campaign_filter = st.selectbox(
+            "ক্যাম্পেইন ফিল্টার",
+            ["সব ক্যাম্পেইন"] + [c['title'] for c in st.session_state.active_campaigns + st.session_state.completed_campaigns]
+        )
+    
+    st.markdown("---")
+    
+    # Performance Metrics
+    st.subheader("📈 পারফরম্যান্স মেট্রিক্স")
+    
+    col1, col2, col3, col4 = st.columns(4)
+    
+    total_reach = sum(c.get('current_reach', 0) for c in st.session_state.active_campaigns + st.session_state.completed_campaigns)
+    total_engagement = sum(c.get('current_engagement', 0) for c in st.session_state.active_campaigns + st.session_state.completed_campaigns)
+    total_earning = sum(c.get('estimated_earning', 0) for c in st.session_state.completed_campaigns) + \
+                   sum(c.get('estimated_earning', 0) for c in st.session_state.active_campaigns if c['status'] == 'posted')
+    campaign_count = len(st.session_state.active_campaigns) + len(st.session_state.completed_campaigns)
+    
+    with col1:
+        st.metric("মোট রিচ", f"{total_reach}")
+    with col2:
+        st.metric("মোট এঙ্গেজমেন্ট", f"{total_engagement}")
+    with col3:
+        st.metric("মোট আয়", f"৳{total_earning:.2f}")
+    with col4:
+        st.metric("মোট ক্যাম্পেইন", f"{campaign_count}")
+    
+    st.markdown("---")
+    
+    # Detailed Campaign Performance
+    st.subheader("🎯 ক্যাম্পেইন পারফরম্যান্স")
+    
+    if not st.session_state.active_campaigns and not st.session_state.completed_campaigns:
+        st.info("📭 কোনো ক্যাম্পেইন ডেটা নেই। প্রথমে কিছু ক্যাম্পেইন গ্রহণ করুন।")
+    else:
+        # Create performance table
+        performance_data = []
+        
+        for campaign in st.session_state.active_campaigns + st.session_state.completed_campaigns:
+            if campaign_filter != "সব ক্যাম্পেইন" and campaign['title'] != campaign_filter:
+                continue
+            
+            performance_data.append({
+                'ব্র্যান্ড': campaign['brand'],
+                'ক্যাম্পেইন': campaign['title'],
+                'স্ট্যাটাস': 'সম্পন্ন' if campaign in st.session_state.completed_campaigns else 'চলমান',
+                'রিচ': campaign.get('current_reach', 0),
+                'এঙ্গেজমেন্ট': campaign.get('current_engagement', 0),
+                'আনুমানিক আয়': f"৳{campaign.get('estimated_earning', 0):.2f}",
+                'শুরু তারিখ': campaign.get('accepted_date', 'N/A')
+            })
+        
+        if performance_data:
+            st.dataframe(pd.DataFrame(performance_data), use_container_width=True)
+        else:
+            st.info("ফিল্টারের সাথে মিলছে না এমন কোনো ক্যাম্পেইন নেই।")
+
+def show_notifications():
+    """Show notifications panel"""
+    st.sidebar.markdown("### 🔔 নোটিফিকেশন")
+    
+    if not st.session_state.notifications:
+        st.sidebar.info("কোনো নোটিফিকেশন নেই")
+    else:
+        for notif in reversed(st.session_state.notifications[-5:]):
+            color = "#10b981" if notif['type'] == 'success' else "#3b82f6"
+            st.sidebar.markdown(f"""
+            <div style="
+                background: {color}10;
+                border-left: 3px solid {color};
+                padding: 10px;
+                margin: 5px 0;
+                border-radius: 5px;
+                font-size: 0.9rem;
+            ">
+                <div style="display: flex; justify-content: space-between;">
+                    <span>{notif['message']}</span>
+                    <small>{notif['time']}</small>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+    
+    if st.sidebar.button("নোটিফিকেশন পরিষ্কার করুন"):
+        st.session_state.notifications = []
+        st.rerun()
+
+def main():
+    # Initialize page state
+    if 'page' not in st.session_state:
+        st.session_state.page = "dashboard"
+    
+    # Sidebar Navigation
+    st.sidebar.image("https://via.placeholder.com/150x50/667eea/ffffff?text=Chronos+Bazaar", use_column_width=True)
+    
+    st.sidebar.markdown("---")
+    st.sidebar.title("📱 নেভিগেশন")
+    
+    # Navigation buttons
+    if st.sidebar.button("📊 ড্যাশবোর্ড", use_container_width=True):
+        st.session_state.page = "dashboard"
+        st.rerun()
+    
+    if st.sidebar.button("🏢 ব্র্যান্ড মার্কেটপ্লেস", use_container_width=True):
+        st.session_state.page = "marketplace"
+        st.rerun()
+    
+    if st.sidebar.button("🎨 কন্টেন্ট তৈরি করুন", use_container_width=True):
+        st.session_state.page = "create_content"
+        st.rerun()
+    
+    if st.sidebar.button("📊 পারফরম্যান্স", use_container_width=True):
+        st.session_state.page = "performance"
+        st.rerun()
+    
+    st.sidebar.markdown("---")
+    
+    # Show notifications in sidebar
+    show_notifications()
+    
+    st.sidebar.markdown("---")
+    
+    # User info
+    st.sidebar.markdown("### 👤 আপনার তথ্য")
+    st.sidebar.markdown(f"**ব্যালেন্স:** ৳{st.session_state.balance}")
+    st.sidebar.markdown(f"**সক্রিয় ক্যাম্পেইন:** {len([c for c in st.session_state.active_campaigns if c['status'] != 'completed'])}")
+    
+    if st.sidebar.button("💰 উইথড্র করুন"):
+        if st.session_state.balance > 0:
+            st.sidebar.success(f"৳{st.session_state.balance} উইথড্র করা হয়েছে!")
+            st.session_state.balance = 0
+            add_notification("✅ উইথড্র সফল হয়েছে!", 'success')
+        else:
+            st.sidebar.warning("উইথড্র করার জন্য পর্যাপ্ত ব্যালেন্স নেই")
+    
+    st.sidebar.markdown("---")
+    
+    # Page selection
+    if st.session_state.page == "dashboard":
+        show_dashboard()
+    elif st.session_state.page == "marketplace":
+        show_marketplace()
+    elif st.session_state.page == "create_content":
+        create_content()
+    elif st.session_state.page == "performance":
+        show_performance()
+
+if __name__ == "__main__":
+    main()
