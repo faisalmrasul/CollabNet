@@ -138,3 +138,8 @@ Website or deck: add when ready
 
 This is an early-stage prototype.
 Feedback, issues, and contributions are welcome.
+
+## Contact
+
+**Email:** faisalmrasul13@gmail.com | **Website:** https://faisalmrasul.github.io/inquiro-media/ 
+
